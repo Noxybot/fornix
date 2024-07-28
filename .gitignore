@@ -1,3 +1,5 @@
+build/*
+
 # Prerequisites
 *.d
 
@@ -30,3 +32,6 @@
 *.exe
 *.out
 *.app
+
+.cache
+compile_commands.json
