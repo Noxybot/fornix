@@ -28,6 +28,47 @@ void logGlfwError() {
     PLOG_ERROR << "GLFW Error: " << error;
 }
 
+void setup_vao(const std::vector<float> &verticies,
+               std::uint32_t &out_vao_index) {
+  // (1) Allocate Vertex Array Object.
+  // 1. Ask OpenGL to allocate one Vertex Array Object.
+  glGenVertexArrays(1, &out_vao_index);
+  PLOG_INFO << "vao index " << out_vao_index;
+  // 1.1. Make the VAO active/current.
+  glBindVertexArray(out_vao_index);
+
+  // 2. Ask OpenGL to create 1 Buffer Object.
+  GLuint VBO = 0;
+  // 2. Ask OpenGL to allocate 1 Buffer Object (that's just a generic buffer).
+  glGenBuffers(1, &VBO);
+  // 2.1 Bind the buffer to the GL_ARRAY_BUFFER context (which also tells that
+  // we're going to store vertex attributes in the buffer) and binds it to the
+  // current VAO.
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  // 2.3 Copy the data in the buffer currently bound to GL_ARRAY_BUFFER target.
+  glBufferData(GL_ARRAY_BUFFER, verticies.size() * sizeof(float),
+               verticies.data(), GL_STATIC_DRAW);
+
+  // 3.1 Specify how currently bound Vertex Buffer Object (GL_ARRAY_BUFFER)
+  // should be splitted into attributes for the Vertex Shader.
+  // Note: this information is stored in the current VAO.
+  constexpr auto ATTRIBUTE_INDEX = 0;
+  glVertexAttribPointer(
+      ATTRIBUTE_INDEX, // Index of the input attribute (as specified in the
+                       // vertex shader).
+      3,               // Number of component per attribute.
+      GL_FLOAT,        // Type of the each component in the attribute.
+      GL_FALSE, // Should the data be clamped/normalized to the range [-1, 1]
+                // for signed and [0, 1] for unsigned.
+      sizeof(float) * 3, // The size of one vertex attrbute.
+      nullptr            // Offset of the first attribute.
+  );
+  // 3.2 Enable the vertex attribute.
+  glEnableVertexAttribArray(ATTRIBUTE_INDEX // Index of the input attribute (as
+                                            // specified in the vertex shader).
+  );
+}
+
 int main() {
   static plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
   plog::init(plog::verbose, &consoleAppender);
@@ -66,61 +107,45 @@ int main() {
   // Screen size changed.
   glfwSetFramebufferSizeCallback(window, framebuffer_size_changed_cb);
 
-  // (1) Allocate Vertex Array Object.
-  GLuint VAO = 0;
-  // 1. Ask OpenGL to allocate one Vertex Array Object.
-  glGenVertexArrays(1, &VAO);
-  // 1.1. Make the VAO active/current.
-  glBindVertexArray(VAO);
-
   // (2) Allocate Vertex Buffer Object
   const float triangle[]{
-      0.5f,  0.5f,  0.0f, // top right
-      0.5f,  -0.5f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, // bottom left
-      -0.5f, 0.5f,  0.0f  // top left
+      -1.0, 0.0, 0.0, // Left.
+      -0.5, 0.5, 0.0, // Top.
+      0.0, 0.0, 0.0,  // Right.
+                      // Second triangle.
+      0.0, 0.0, 0.0,  // Left.
+      0.5, 0.5, 0.0,  // Top.
+      1.0, 0.0, 0.0   // Right.
+
   };
+  GLuint vao1, vao2;
+  setup_vao(
+      {
+          -1.0, 0.0, 0.0, // Left.
+          -0.5, 0.5, 0.0, // Top.
+          0.0, 0.0, 0.0,  // Right.
+      },
+      vao1);
+  setup_vao(
+      {
+          0.0, 0.0, 0.0, // Left.
+          0.5, 0.5, 0.0, // Top.
+          1.0, 0.0, 0.0  // Right.
+      },
+      vao2);
   const std::uint32_t indices[] = {
       // note that we start from 0!
       0, 1, 3, // first triangle
       1, 2, 3  // second triangle
   };
   GLuint EBO = 0;
+  // Ask OpenGL to create 1 Buffer Object.
   glGenBuffers(1, &EBO);
-  // 2. Ask OpenGL to create 1 Buffer Object.
-  GLuint VBO = 0;
   // Bind to the current VAO.
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
   // Copy the indicies into the VBO.
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
-  // 2. Ask OpenGL to allocate 1 Buffer Object (that's just a generic buffer).
-  glGenBuffers(1, &VBO);
-  // 2.1 Bind the buffer to the GL_ARRAY_BUFFER context (which also tells that
-  // we're going to store vertex attributes in the buffer) and binds it to the
-  // current VAO.
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  // 2.3 Copy the data in the buffer currently bound to GL_ARRAY_BUFFER target.
-  glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), triangle, GL_STATIC_DRAW);
-
-  // 3.1 Specify how currently bound Vertex Buffer Object (GL_ARRAY_BUFFER)
-  // should be splitted into attributes for the Vertex Shader.
-  // Note: this information is stored in the current VAO.
-  constexpr auto ATTRIBUTE_INDEX = 0;
-  glVertexAttribPointer(
-      ATTRIBUTE_INDEX, // Index of the input attribute (as specified in the
-                       // vertex shader).
-      3,               // Number of component per attribute.
-      GL_FLOAT,        // Type of the each component in the attribute.
-      GL_FALSE, // Should the data be clamped/normalized to the range [-1, 1]
-                // for signed and [0, 1] for unsigned.
-      sizeof(float) * 3, // The size of one vertex attrbute.
-      nullptr            // Offset of the first attribute.
-  );
-  // 3.2 Enable the vertex attribute.
-  glEnableVertexAttribArray(ATTRIBUTE_INDEX // Index of the input attribute (as
-                                            // specified in the vertex shader).
-  );
 
   // 4.1 Compile & link the shader program.
   std::uint32_t shader_program_id = 0;
@@ -131,16 +156,20 @@ int main() {
   // 4.2 Use the compiled & linked shader program.
   glUseProgram(shader_program_id);
 
-  glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINES);
   // Render loop.
   while (!glfwWindowShouldClose(window)) {
     fornix::process_input(window);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    // glDrawArrays(GL_TRIANGLES, 0, // Index of VAO.
-    //              3                // Number of indicies to be rendered.
-    // );
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    for (const auto vao : {vao1, vao2}) {
+      glBindVertexArray(vao);
+      glDrawArrays(GL_TRIANGLES, 0, // Index of VAO.
+                   3                // Number of indicies to be rendered.
+      );
+    }
+
+    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
