@@ -75,11 +75,25 @@ int main() {
 
   // (2) Allocate Vertex Buffer Object
   const float triangle[]{
-      0.0f,  0.5f,  0.0f, // Mid top.
-      -0.5f, -0.5f, 0.0f, // Left bottom.
-      0.5f,  -0.5f, 0.0f, // Right bottom.
+      0.5f,  0.5f,  0.0f, // top right
+      0.5f,  -0.5f, 0.0f, // bottom right
+      -0.5f, -0.5f, 0.0f, // bottom left
+      -0.5f, 0.5f,  0.0f  // top left
   };
+  const std::uint32_t indices[] = {
+      // note that we start from 0!
+      0, 1, 3, // first triangle
+      1, 2, 3  // second triangle
+  };
+  GLuint EBO = 0;
+  glGenBuffers(1, &EBO);
+  // 2. Ask OpenGL to create 1 Buffer Object.
   GLuint VBO = 0;
+  // Bind to the current VAO.
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  // Copy the indicies into the VBO.
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+               GL_STATIC_DRAW);
   // 2. Ask OpenGL to allocate 1 Buffer Object (that's just a generic buffer).
   glGenBuffers(1, &VBO);
   // 2.1 Bind the buffer to the GL_ARRAY_BUFFER context (which also tells that
@@ -117,15 +131,16 @@ int main() {
   // 4.2 Use the compiled & linked shader program.
   glUseProgram(shader_program_id);
 
+  glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
   // Render loop.
-
   while (!glfwWindowShouldClose(window)) {
     fornix::process_input(window);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLES, 0, // Index of VAO.
-                 3                // Number of indicies to be rendered.
-    );
+    // glDrawArrays(GL_TRIANGLES, 0, // Index of VAO.
+    //              3                // Number of indicies to be rendered.
+    // );
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
