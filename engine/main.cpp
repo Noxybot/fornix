@@ -14,9 +14,41 @@
 #include <plog/Init.h>
 #include <plog/Log.h>
 
-#include <cmath>
 #include <cstdint>
 #include <utility>
+
+#ifdef _WIN32
+#include <windows.h>
+#elif __linux__
+#include <unistd.h>
+#elif __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
+std::filesystem::path get_exe_path() {
+  char path[PATH_MAX];
+
+#ifdef _WIN32
+  // Windows implementation
+  GetModuleFileName(NULL, path, MAX_PATH);
+#elif __linux__
+  // Linux implementation
+  ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+  if (count == -1) {
+    throw std::runtime_error("Failed to get executable path");
+  }
+  path[count] = '\0';
+#elif __APPLE__
+  // macOS implementation
+  uint32_t size = sizeof(path);
+  if (_NSGetExecutablePath(path, &size) != 0) {
+    throw std::runtime_error("Buffer too small; size needed: " +
+                             std::to_string(size));
+  }
+#endif
+
+  return std::filesystem::path(path).parent_path();
+}
 
 void framebuffer_size_changed_cb(GLFWwindow *window, std::int32_t width,
                                  std::int32_t height) {
@@ -183,10 +215,9 @@ int main() {
   // }
   // 4.2 Use the compiled & linked shader program.
   // glUseProgram(shader_program_id);
-  fornix::shader_program_opengl program{
-      "C:\\Users\\Eduard\\Desktop\\fornix\\engine\\shaders\\src\\shader."
-      "vs",
-      "C:\\Users\\Eduard\\Desktop\\fornix\\engine\\shaders\\src\\shader.fs"};
+  const auto exe = get_exe_path();
+  fornix::shader_program_opengl program{exe / "resources" / "shader.vs",
+                                        exe / "resources" / "shader.fs"};
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   //  Render loop.
   while (!glfwWindowShouldClose(window)) {

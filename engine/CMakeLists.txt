@@ -18,5 +18,7 @@ target_link_libraries(engine
     glfw
     plog
 )
+set(RESOURCE_DIR "${CMAKE_SOURCE_DIR}/engine/shaders/src/resources")
 
 install(TARGETS engine DESTINATION bin)
+install(DIRECTORY ${RESOURCE_DIR}/ DESTINATION bin/resources)
