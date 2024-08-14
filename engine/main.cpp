@@ -1,5 +1,5 @@
 #include "process_input.hpp"
-#include "shaders.hpp"
+#include "shader_program_opengl.hpp"
 
 #define GLAD_GL_IMPLEMENTATION
 // Glad header from GLFW.
@@ -14,7 +14,9 @@
 #include <plog/Init.h>
 #include <plog/Log.h>
 
+#include <cmath>
 #include <cstdint>
+#include <utility>
 
 void framebuffer_size_changed_cb(GLFWwindow *window, std::int32_t width,
                                  std::int32_t height) {
@@ -26,6 +28,25 @@ void logGlfwError() {
   const char *error = nullptr;
   if (glfwGetError(&error))
     PLOG_ERROR << "GLFW Error: " << error;
+}
+
+void enable_vertex_attribute(const std::int32_t attribute_index,
+                             const std::int32_t stride_size,
+                             const void *offset) {
+  glVertexAttribPointer(
+      attribute_index, // Index of the input attribute (as specified in the
+                       // vertex shader).
+      3,               // Number of component per attribute.
+      GL_FLOAT,        // Type of the each component in the attribute.
+      GL_FALSE,    // Should the data be clamped/normalized to the range [-1, 1]
+                   // for signed and [0, 1] for unsigned.
+      stride_size, // The size of one vertex attrbute.
+      offset       // Offset of the first attribute.
+  );
+  // 3.2 Enable the vertex attribute.
+  glEnableVertexAttribArray(attribute_index // Index of the input attribute (as
+                                            // specified in the vertex shader).
+  );
 }
 
 void setup_vao(const std::vector<float> &verticies,
@@ -52,21 +73,8 @@ void setup_vao(const std::vector<float> &verticies,
   // 3.1 Specify how currently bound Vertex Buffer Object (GL_ARRAY_BUFFER)
   // should be splitted into attributes for the Vertex Shader.
   // Note: this information is stored in the current VAO.
-  constexpr auto ATTRIBUTE_INDEX = 0;
-  glVertexAttribPointer(
-      ATTRIBUTE_INDEX, // Index of the input attribute (as specified in the
-                       // vertex shader).
-      3,               // Number of component per attribute.
-      GL_FLOAT,        // Type of the each component in the attribute.
-      GL_FALSE, // Should the data be clamped/normalized to the range [-1, 1]
-                // for signed and [0, 1] for unsigned.
-      sizeof(float) * 3, // The size of one vertex attrbute.
-      nullptr            // Offset of the first attribute.
-  );
-  // 3.2 Enable the vertex attribute.
-  glEnableVertexAttribArray(ATTRIBUTE_INDEX // Index of the input attribute (as
-                                            // specified in the vertex shader).
-  );
+  enable_vertex_attribute(0, sizeof(float) * 6, nullptr);
+  enable_vertex_attribute(1, sizeof(float) * 6, (void *)(sizeof(float) * 3));
 }
 
 int main() {
@@ -121,51 +129,80 @@ int main() {
   GLuint vao1, vao2;
   setup_vao(
       {
-          -1.0, 0.0, 0.0, // Left.
-          -0.5, 0.5, 0.0, // Top.
-          0.0, 0.0, 0.0,  // Right.
+          // Color.
+          -1.0, 0.0, 0.0, 1.0, 1.0, 1.0, // Left.
+          -0.5, 0.5, 0.0, 1.0, 1.0, 0.0, // Top.
+          0.0, 0.0, 0.0, 1.0, 1.0, 1.0,  // Right.
       },
       vao1);
   setup_vao(
       {
-          0.0, 0.0, 0.0, // Left.
-          0.5, 0.5, 0.0, // Top.
-          1.0, 0.0, 0.0  // Right.
+          // Color
+          0.0, 0.0, 0.0, 1.0, 0.0, 0.0, // Left.
+          0.5, 0.5, 0.0, 0.0, 1.0, 0.0, // Top.
+          1.0, 0.0, 0.0, 0.0, 0.0, 1.0, // Right.
       },
       vao2);
-  const std::uint32_t indices[] = {
-      // note that we start from 0!
-      0, 1, 3, // first triangle
-      1, 2, 3  // second triangle
-  };
-  GLuint EBO = 0;
-  // Ask OpenGL to create 1 Buffer Object.
-  glGenBuffers(1, &EBO);
-  // Bind to the current VAO.
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  // Copy the indicies into the VBO.
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-               GL_STATIC_DRAW);
+  // const std::uint32_t indices[] = {
+  //     // note that we start from 0!
+  //     0, 1, 3, // first triangle
+  //     1, 2, 3  // second triangle
+  // };
+  // GLuint EBO = 0;
+  // // Ask OpenGL to create 1 Buffer Object.
+  // glGenBuffers(1, &EBO);
+  // // Bind to the current VAO.
+  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  // // Copy the indicies into the VBO.
+  // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+  //              GL_STATIC_DRAW);
 
   // 4.1 Compile & link the shader program.
-  std::uint32_t shader_program_id = 0;
-  if (!fornix::shaders::opengl::compile_and_link_all(shader_program_id)) {
-    PLOG_FATAL << "failed to compile/link the shader program";
-    return -4;
-  }
-  // 4.2 Use the compiled & linked shader program.
-  glUseProgram(shader_program_id);
+  // std::uint32_t shader_program_id_1 = 0, shader_program_id_2 = 0;
+  // if (!fornix::shaders::opengl::compile_and_link_all(shader_program_id_1)) {
+  //   PLOG_FATAL << "failed to compile/link the shader program 1";
+  //   return -4;
+  // }
+  // if (!fornix::shaders::opengl::compile_and_link_all(shader_program_id_2,
+  //                                                    nullptr,
+  //                                                    R"(
+  //   #version 330 core
+  //   out vec4 FragColor;
+  //   uniform vec4 app_color;
+  //   in vec4 vertex_color;
 
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINES);
-  // Render loop.
+  //   void main()
+  //   {
+  //       //FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
+  //       //FragColor = app_color;
+  //       FragColor = vertex_color;
+  //   }
+  //   )")) {
+  //   PLOG_FATAL << "failed to compile/link the shader program 2";
+  //   return -4;
+  // }
+  // 4.2 Use the compiled & linked shader program.
+  // glUseProgram(shader_program_id);
+  fornix::shader_program_opengl program{
+      "C:\\Users\\Eduard\\Desktop\\fornix\\engine\\shaders\\src\\shader."
+      "vs",
+      "C:\\Users\\Eduard\\Desktop\\fornix\\engine\\shaders\\src\\shader.fs"};
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  //  Render loop.
   while (!glfwWindowShouldClose(window)) {
     fornix::process_input(window);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    for (const auto vao : {vao1, vao2}) {
+    for (const auto &[vao, shader] : {std::pair(vao1, program)}) {
+      shader.activate();
+
+      // const auto time = glfwGetTime();
+      // auto greenVal = (sin(time) / 2.0) + 0.5;
+      // const auto color_loc = glGetUniformLocation(shader, "app_color");
+      // glUniform4f(color_loc, 0.0, greenVal, 0.0, 1.0);
       glBindVertexArray(vao);
       glDrawArrays(GL_TRIANGLES, 0, // Index of VAO.
-                   3                // Number of indicies to be rendered.
+                   4                // Number of indicies to be rendered.
       );
     }
 

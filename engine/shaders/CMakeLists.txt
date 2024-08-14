@@ -1,5 +1,6 @@
 set(SOURCES
-    src/shaders.cpp)
+    src/shader_program_opengl.cpp
+)
 
 add_library(shaders ${SOURCES})
 
