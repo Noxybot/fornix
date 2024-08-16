@@ -162,9 +162,9 @@ int main() {
   setup_vao(
       {
           // Color.
-          -1.0, 0.0, 0.0, 1.0, 1.0, 1.0, // Left.
-          -0.5, 0.5, 0.0, 1.0, 1.0, 0.0, // Top.
-          0.0, 0.0, 0.0, 1.0, 1.0, 1.0,  // Right.
+          -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, // Left.
+          0.0, 0.5, 0.0, 0.0, 1.0, 0.0,  // Top.
+          0.5, 0.0, 0.0, 0.0, 0.0, 1.0,  // Right.
       },
       vao1);
   setup_vao(
@@ -219,13 +219,14 @@ int main() {
   fornix::shader_program_opengl program{exe / "resources" / "shader.vs",
                                         exe / "resources" / "shader.fs"};
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  program.activate();
+  program.use_float("offset", 0.0);
   //  Render loop.
   while (!glfwWindowShouldClose(window)) {
     fornix::process_input(window);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     for (const auto &[vao, shader] : {std::pair(vao1, program)}) {
-      shader.activate();
 
       // const auto time = glfwGetTime();
       // auto greenVal = (sin(time) / 2.0) + 0.5;
